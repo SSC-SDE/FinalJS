@@ -90,25 +90,28 @@ export function App(root) {
     detailsBox.appendChild(section);
   }
 
+
   function renderMovies() {
     const moviesBox = document.querySelector(".movies-box");
     moviesBox.innerHTML = ""; // Clear previous content
-
+  
     if (isLoading) {
       moviesBox.innerHTML = '<p class="loader">Loading...</p>';
       return;
     }
-
+  
     if (error) {
       moviesBox.innerHTML = `<p class="error">⛔ ${error}</p>`;
+      window.updateNumResults(); // Update results count even if there's an error
       return;
     }
-
+  
     if (movies.length === 0) {
       moviesBox.innerHTML = '<p class="error">No movies found.</p>';
+      window.updateNumResults(); // Update results count when no movies are found
       return;
     }
-
+  
     const ul = document.createElement("ul");
     ul.className = "list list-movies";
     movies.forEach((movie) => {
@@ -121,39 +124,50 @@ export function App(root) {
       li.addEventListener("click", () => fetchMovieDetails(movie.imdbID));
       ul.appendChild(li);
     });
-
+  
     moviesBox.appendChild(ul);
+    window.updateNumResults(); // Update results count after rendering movies
   }
+  
 
   function renderNavBar() {
     const navBar = document.createElement("nav");
     navBar.className = "nav-bar";
-
+  
     const logo = document.createElement("div");
     logo.className = "logo";
     logo.innerHTML = '<span>🍿</span><h1>IMDBClone</h1>';
     navBar.appendChild(logo);
-
+  
     const searchInput = document.createElement("input");
     searchInput.className = "search";
     searchInput.type = "text";
     searchInput.placeholder = "Search movies...";
     searchInput.value = query;
-
+  
     searchInput.addEventListener("input", (e) => {
       query = e.target.value;
     });
+  
     searchInput.addEventListener("keydown", (e) => {
       if (e.code === "Enter") fetchMovies();
     });
-
+  
     navBar.appendChild(searchInput);
-
+  
+    // Create numResults element
     const numResults = document.createElement("p");
     numResults.className = "num-results";
-    numResults.innerHTML = `Found <strong>${movies.length}</strong> results`;
     navBar.appendChild(numResults);
-
+  
+    // Update numResults dynamically
+    function updateNumResults() {
+      numResults.innerHTML = `Found <strong>${movies.length}</strong> results`;
+    }
+  
+    // Attach the update function to the window for easy calling
+    window.updateNumResults = updateNumResults;
+  
     return navBar;
   }
 
@@ -186,36 +200,36 @@ export function App(root) {
   }
 
   // Fetch movies from API
-  async function fetchMovies() {
-    if (query.length < 3) {
-      movies = [];
-      error = "";
-      renderMovies();
-      return;
-    }
-
-    try {
-      isLoading = true;
-      error = "";
-      renderMovies();
-
-      const res = await fetch(
-        `https://www.omdbapi.com/?apikey=69c6dd20&s=${query}`
-      );
-      if (!res.ok) throw new Error("Failed to fetch movies");
-
-      const data = await res.json();
-      if (data.Response === "False") throw new Error(data.Error);
-
-      movies = data.Search;
-    } catch (err) {
-      error = err.message;
-    } finally {
-      isLoading = false;
-      renderMovies(); // Ensure the UI is updated after fetching movies
-    }
+ 
+async function fetchMovies() {
+  if (query.length < 3) {
+    movies = [];
+    error = "";
+    renderMovies();
+    return;
   }
 
+  try {
+    isLoading = true;
+    error = "";
+    renderMovies();
+
+    const res = await fetch(
+      `https://www.omdbapi.com/?apikey=69c6dd20&s=${query}`
+    );
+    if (!res.ok) throw new Error("Failed to fetch movies");
+
+    const data = await res.json();
+    if (data.Response === "False") throw new Error(data.Error);
+
+    movies = data.Search;
+  } catch (err) {
+    error = err.message;
+  } finally {
+    isLoading = false;
+    renderMovies(); // Ensure the UI is updated after fetching movies
+  }
+}
   // Fetch single movie details
   async function fetchMovieDetails(id) {
     try {
